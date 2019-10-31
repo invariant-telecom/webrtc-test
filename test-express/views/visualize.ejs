@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title><%= title %></title>
+  <link rel='stylesheet' href='/stylesheets/style.css' />
+  <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+  <h1><%= title %></h1>
+  <p>Welcome to <%= title %></p>
+  <img id="play" />
+  <div id="logger"></div>
+</body>
+<script type="text/javascript">
+  var room = "<%= roomId %>";
+  var socket = io().connect();
+  socket.on("connect", function () {
+    socket.emit("room", room);
+  });
+  socket.on("stream", function (image) {
+    $("#play").attr("src", image);
+    // $("#logger").text(image);
+  });
+</script>
+
+</html>
