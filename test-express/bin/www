@@ -29,6 +29,13 @@ io.on("connection", function (socket) {
     let rooms = Object.keys(io.sockets.adapter.rooms);
     io.to(socket.id).emit('list_room', getRoom(rooms));
   });
+
+  socket.on("leave_room", () => {
+    setTimeout(() => {
+      let rooms = Object.keys(io.sockets.adapter.rooms);
+      socket.broadcast.emit('list_room', getRoom(rooms));
+    }, 1000)
+  });
 });
 
 const getRoom = (rooms) => rooms.filter(room => room.length < 20 && room !== 'list_room');

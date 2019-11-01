@@ -4,7 +4,7 @@ var router = express.Router();
 /* GET users listing. */
 router.get('/:id', function (req, res, next) {
   res.render('visualize', {
-    title: 'Visualize',
+    title: 'Live',
     roomId: req.params.id
   });
 });

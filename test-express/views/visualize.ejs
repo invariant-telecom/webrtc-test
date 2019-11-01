@@ -3,16 +3,21 @@
 
 <head>
   <title><%= title %></title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   <link rel='stylesheet' href='/stylesheets/style.css' />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
-  <h1><%= title %></h1>
-  <p>Welcome to <%= title %></p>
-  <img id="play" />
-  <div id="logger"></div>
+  <div class="container">
+    <h2><%= title %> . . .</h2>
+    <div class="video-container">
+      <img id="play" />
+    </div>
+  </div>
 </body>
 <script type="text/javascript">
   var room = "<%= roomId %>";
@@ -22,7 +27,6 @@
   });
   socket.on("stream", function (image) {
     $("#play").attr("src", image);
-    // $("#logger").text(image);
   });
 </script>
 

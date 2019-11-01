@@ -3,23 +3,30 @@
 
 <head>
   <title><%= title %></title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   <link rel='stylesheet' href='/stylesheets/style.css' />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
-  <h1><%= title %></h1>
-  <p>Welcome to <%= title %></p>
-  <!-- <input type="text" id="room" />
-  <button onclick="startEmit()">Start</button> -->
-  <video src="" id="video" style="width:700px; height: 350px;" autoplay="true"></video>
-
-  <canvas style="display:none;" id="preview"></canvas>
-  <div id="logger"></div>
+  <div class="container">
+    <h2><%= title %> . . .</h2>
+    <div>
+      <video src="" id="video" style="width:700px; height: 525;" autoplay="true"></video>
+      <canvas style="display:none;" id="preview"></canvas>
+    </div>
+    <div id="logger"></div>
+  </div>
 </body>
 
 <script type="text/javascript">
+  var socket = io();
+  window.onbeforeunload = () => {
+    socket.emit("leave_room");
+  };
   var roomId = new Date().getTime();
 
   var canvas = document.getElementById("preview");
@@ -33,7 +40,6 @@
 
   var video = document.getElementById("video");
 
-  var socket = io();
   socket.emit("room", roomId);
 
   function logger(msg) {
