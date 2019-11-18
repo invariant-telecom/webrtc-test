@@ -1,0 +1,19 @@
+{
+  "name": "live-streaming-client",
+  "version": "1.0.0",
+  "description": "Dhamaka Live Streaming Client",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Dhamaka",
+    "Live",
+    "Streaming"
+  ],
+  "author": "Sk Arif <skarif2@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
