@@ -1,11 +1,22 @@
-const fs = require("fs");
+const fs = require('fs');
 const express = require('express');
 const https = require('https');
 const socketIO = require('socket.io');
-const debug = require("debug")("myapp:server");
+const sqlite3 = require('sqlite3').verbose();
+const debug = require('debug')('myapp:server');
 
 const app = express();
 
+const db = new sqlite3.Database(':memory:');
+
+db.serialize(function() {
+  db.run(`CREATE TABLE products(
+    liveId TEXT PRIMARY KEY,
+    list TEXT NOT NULL
+  )`);
+});
+
+// db.close();
 // Yes, TLS is required
 const serverConfig = {
   key: fs.readFileSync('key.pem'),
@@ -19,7 +30,16 @@ app.use(express.json());
 const server = https.createServer(serverConfig, app);
 const io = socketIO(server);
 
-app.get("/", function (req, res, next) {
+app.get('/', function(req, res, next) {
+  db.get(
+    'SELECT * FROM products WHERE liveId LIKE "liveroom-1234" LIMIT 1',
+    (err, row) => {
+      if (row) {
+        console.log('Already Exist');
+        return;
+      }
+    }
+  );
   res.json({
     status: 'OK'
   });
@@ -28,25 +48,90 @@ app.get("/", function (req, res, next) {
 /**
  * socket.io stuff
  */
-io.on("connection", socket => {
-  console.log('Socket Connected!');
-})
+io.on('connection', socket => {
+  socket.on('room', (data, cb) => {
+    const liveRoom = `liveroom-${data.shopId
+      .toString()
+      .replace('liveroom-', '')}`;
+    const products = JSON.stringify(data.products);
+    if (data.sender) {
+      db.get(
+        'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
+        [liveRoom],
+        (err, row) => {
+          if (row) {
+            console.log(row);
+            return cb(`${liveRoom} already exist!`, null);
+          }
+        }
+      );
+    }
+
+    socket.join(liveRoom, () => {
+      if (data.sender) {
+        db.run('INSERT INTO products(liveId, list) VALUES(?, ?)', [
+          liveRoom,
+          products
+        ]);
+        let rooms = Object.keys(io.sockets.adapter.rooms);
+        socket.broadcast.emit('roomlist', getRoom(rooms));
+      } else {
+        db.get(
+          'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
+          [liveRoom],
+          (err, row) => {
+            if (row) {
+              cb(null, { products: JSON.parse(row.list) });
+            }
+          }
+        );
+      }
+      cb(null, `Connected to ${liveRoom}`);
+    });
+  });
+
+  socket.on('stream', (shopId, image) => {
+    let liveRoom = `liveroom-${shopId}`;
+    socket.broadcast.to(liveRoom).emit('stream', image);
+  });
+
+  socket.on('message', (shopId, message) => {
+    let liveRoom = `liveroom-${shopId}`;
+    socket.broadcast.to(liveRoom).emit('message', message);
+  });
+
+  socket.on('roomlist', () => {
+    let rooms = Object.keys(io.sockets.adapter.rooms);
+    io.to(socket.id).emit('roomlist', getRoom(rooms));
+  });
+
+  socket.on('leaveroom', ({ shopId, sender } = data) => {
+    if (sender) {
+      let liveRoom = `liveroom-${shopId}`;
+      setTimeout(() => {
+        db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
+        let rooms = Object.keys(io.sockets.adapter.rooms);
+        socket.broadcast.emit('roomlist', getRoom(rooms));
+      }, 500);
+    }
+  });
+});
+
+const getRoom = rooms => rooms.filter(room => room.includes('liveroom'));
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 server.listen(port);
-server.on("error", onError);
-server.on("listening", onListening);
+server.on('error', onError);
+server.on('listening', onListening);
 
 /**
  * Normalize a port into a number, string, or false.
  */
 function normalizePort(val) {
   var port = parseInt(val, 10);
-  return isNaN(port)
-    ? val : port >= 0
-    ? port : false;
+  return isNaN(port) ? val : port >= 0 ? port : false;
 }
 
 /**
@@ -81,4 +166,5 @@ function onListening() {
   var addr = server.address();
   var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
   debug('Listening on ' + bind);
+  console.log(`Server Listening on ${port}`);
 }
