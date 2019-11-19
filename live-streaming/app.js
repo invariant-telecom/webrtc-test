@@ -50,6 +50,7 @@ app.get('/', function(req, res, next) {
  */
 io.on('connection', socket => {
   socket.on('room', (data, cb) => {
+    console.log('calleing ROOM 2222');
     const liveRoom = `liveroom-${data.shopId
       .toString()
       .replace('liveroom-', '')}`;
@@ -101,15 +102,27 @@ io.on('connection', socket => {
   });
 
   socket.on('roomlist', () => {
+    console.log('Calling ROOM LIST 111111');
     let rooms = Object.keys(io.sockets.adapter.rooms);
     io.to(socket.id).emit('roomlist', getRoom(rooms));
   });
 
   socket.on('leaveroom', ({ shopId, sender } = data) => {
     if (sender) {
-      let liveRoom = `liveroom-${shopId}`;
+      let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
       setTimeout(() => {
         db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
+        io.in(liveRoom)
+          .clients(function(error, clients) {
+            if (clients.length > 0) {
+              console.log('clients in the room: \n');
+              console.log(clients);
+              clients.forEach(function(socket_id) {
+                console.log('removeing room');
+                io.sockets.sockets[socket_id].leave(liveRoom);
+              });
+            }
+          });
         let rooms = Object.keys(io.sockets.adapter.rooms);
         socket.broadcast.emit('roomlist', getRoom(rooms));
       }, 500);
