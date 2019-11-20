@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/stylesheets/style.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
-    <script src="https://localhost:3232/socket.io/socket.io.js"></script>
+    <script src="https://localhost:8000/socket.io/socket.io.js"></script>
   </head>
 
   <body>
@@ -33,7 +33,7 @@
   </body>
 
   <script type="text/javascript">
-    const socket = io('https://localhost:3232').connect();
+    const socket = io('https://localhost:8000').connect();
     socket.on('connect', () => {
       const shopId = new Date().getTime();
 
@@ -108,7 +108,7 @@
 
         setInterval(function() {
           viewVideo(video, context);
-        }, 10);
+        }, 5);
       });
     });
   </script>

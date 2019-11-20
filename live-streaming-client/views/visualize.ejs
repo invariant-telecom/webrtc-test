@@ -26,7 +26,7 @@
   </body>
   <script type="text/javascript">
     const shopId = '<%= shopId %>';
-    const socket = io('https://localhost:3232').connect();
+    const socket = io('https://localhost:8000').connect();
 
     socket.on('connect', () => {
       socket.emit(

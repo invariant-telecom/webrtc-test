@@ -23,7 +23,7 @@ const serverConfig = {
   cert: fs.readFileSync('cert.pem')
 };
 
-const port = normalizePort(process.env.PORT || '3232');
+const port = normalizePort(process.env.PORT || '8000');
 app.set('port', port);
 app.use(express.json());
 
@@ -112,17 +112,16 @@ io.on('connection', socket => {
       let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
       setTimeout(() => {
         db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
-        io.in(liveRoom)
-          .clients(function(error, clients) {
-            if (clients.length > 0) {
-              console.log('clients in the room: \n');
-              console.log(clients);
-              clients.forEach(function(socket_id) {
-                console.log('removeing room');
-                io.sockets.sockets[socket_id].leave(liveRoom);
-              });
-            }
-          });
+        io.in(liveRoom).clients(function(error, clients) {
+          if (clients.length > 0) {
+            console.log('clients in the room: \n');
+            console.log(clients);
+            clients.forEach(function(socket_id) {
+              console.log('removeing room');
+              io.sockets.sockets[socket_id].leave(liveRoom);
+            });
+          }
+        });
         let rooms = Object.keys(io.sockets.adapter.rooms);
         socket.broadcast.emit('roomlist', getRoom(rooms));
       }, 500);

@@ -7,7 +7,7 @@ var visualizeRouter = require('./routes/visualize');
 
 const app = express();
 
-const port = 3233;
+const port = 8001;
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
