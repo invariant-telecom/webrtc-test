@@ -12,7 +12,9 @@ const db = new sqlite3.Database(':memory:');
 db.serialize(function() {
   db.run(`CREATE TABLE products(
     liveId TEXT PRIMARY KEY,
-    list TEXT NOT NULL
+    title TEXT NOT NULL,
+    list TEXT NOT NULL,
+    date TEXT NOT NULL
   )`);
 });
 
@@ -31,15 +33,6 @@ const server = https.createServer(serverConfig, app);
 const io = socketIO(server);
 
 app.get('/', function(req, res, next) {
-  db.get(
-    'SELECT * FROM products WHERE liveId LIKE "liveroom-1234" LIMIT 1',
-    (err, row) => {
-      if (row) {
-        console.log('Already Exist');
-        return;
-      }
-    }
-  );
   res.json({
     status: 'OK'
   });
@@ -50,11 +43,10 @@ app.get('/', function(req, res, next) {
  */
 io.on('connection', socket => {
   socket.on('room', (data, cb) => {
-    console.log('calleing ROOM 2222');
+    console.log('Data', data);
     const liveRoom = `liveroom-${data.shopId
       .toString()
       .replace('liveroom-', '')}`;
-    const products = JSON.stringify(data.products);
     if (data.sender) {
       db.get(
         'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
@@ -70,10 +62,10 @@ io.on('connection', socket => {
 
     socket.join(liveRoom, () => {
       if (data.sender) {
-        db.run('INSERT INTO products(liveId, list) VALUES(?, ?)', [
-          liveRoom,
-          products
-        ]);
+        db.run(
+          'INSERT INTO products(liveId, title, list, date) VALUES(?, ?, ?, ?)',
+          [liveRoom, JSON.stringify(data.products), data.title, data.date]
+        );
         let rooms = Object.keys(io.sockets.adapter.rooms);
         socket.broadcast.emit('roomlist', getRoom(rooms));
       } else {
@@ -82,7 +74,9 @@ io.on('connection', socket => {
           [liveRoom],
           (err, row) => {
             if (row) {
-              cb(null, { products: JSON.parse(row.list) });
+              // row.list = JSON.parse(row.list);
+              console.log('FInding room', row);
+              cb(null, row);
             }
           }
         );
@@ -102,8 +96,21 @@ io.on('connection', socket => {
   });
 
   socket.on('roomlist', () => {
-    console.log('Calling ROOM LIST 111111');
-    let rooms = Object.keys(io.sockets.adapter.rooms);
+    const rooms = getRoom(Object.keys(io.sockets.adapter.rooms));
+    const roomData = rooms.forEach(room => {
+      db.get(
+        'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
+        [room],
+        (err, row) => {
+          return {
+            liveId: row.liveId,
+            title: row.title,
+            products: JSON.parse(row.list),
+            date: row.date
+          };
+        }
+      );
+    });
     io.to(socket.id).emit('roomlist', getRoom(rooms));
   });
 
