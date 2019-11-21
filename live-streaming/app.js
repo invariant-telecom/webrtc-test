@@ -64,10 +64,11 @@ io.on('connection', socket => {
       if (data.sender) {
         db.run(
           'INSERT INTO products(liveId, title, list, date) VALUES(?, ?, ?, ?)',
-          [liveRoom, JSON.stringify(data.products), data.title, data.date]
+          [liveRoom, data.title, JSON.stringify(data.products), data.date]
         );
-        let rooms = Object.keys(io.sockets.adapter.rooms);
-        socket.broadcast.emit('roomlist', getRoom(rooms));
+        getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
+          socket.broadcast.emit('roomlist', result);
+        });
       } else {
         db.get(
           'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
@@ -75,7 +76,7 @@ io.on('connection', socket => {
           (err, row) => {
             if (row) {
               // row.list = JSON.parse(row.list);
-              console.log('FInding room', row);
+              console.log('Finding room', row);
               cb(null, row);
             }
           }
@@ -96,22 +97,9 @@ io.on('connection', socket => {
   });
 
   socket.on('roomlist', () => {
-    const rooms = getRoom(Object.keys(io.sockets.adapter.rooms));
-    const roomData = rooms.forEach(room => {
-      db.get(
-        'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
-        [room],
-        (err, row) => {
-          return {
-            liveId: row.liveId,
-            title: row.title,
-            products: JSON.parse(row.list),
-            date: row.date
-          };
-        }
-      );
+    getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
+      io.to(socket.id).emit('roomlist', result);
     });
-    io.to(socket.id).emit('roomlist', getRoom(rooms));
   });
 
   socket.on('leaveroom', ({ shopId, sender } = data) => {
@@ -136,7 +124,35 @@ io.on('connection', socket => {
   });
 });
 
-const getRoom = rooms => rooms.filter(room => room.includes('liveroom'));
+const getRoom = (rooms, cb) => {
+  const filteredRooms = rooms.filter(room => room.includes('liveroom'));
+  let roomData = [];
+  if (filteredRooms.length !== 0) {
+    db.each(
+      'SELECT * FROM products WHERE liveId IN ' +
+        JSON.stringify(filteredRooms)
+          .replace('[', '(')
+          .replace(']', ')'),
+      (err, row) => {
+        console.log(err);
+        console.log(row);
+        const d = {
+          liveId: row.liveId,
+          title: row.title,
+          products: JSON.parse(row.list),
+          date: row.date
+        };
+        console.log('eeeeeeee', d);
+        roomData.push(d);
+        if (roomData.length === filteredRooms.length) {
+          cb(null, roomData);
+        }
+      }
+    );
+  } else {
+    cb(null, roomData);
+  }
+};
 
 /**
  * Listen on provided port, on all network interfaces.
