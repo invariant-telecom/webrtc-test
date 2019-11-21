@@ -14,7 +14,7 @@ db.serialize(function() {
     liveId TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     list TEXT NOT NULL,
-    date TEXT NOT NULL
+    date number NOT NULL
   )`);
 });
 
@@ -43,25 +43,21 @@ app.get('/', function(req, res, next) {
  */
 io.on('connection', socket => {
   socket.on('room', (data, cb) => {
-    console.log('Data', data);
     const liveRoom = `liveroom-${data.shopId
       .toString()
       .replace('liveroom-', '')}`;
+
     if (data.sender) {
       db.get(
         'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
         [liveRoom],
         (err, row) => {
           if (row) {
-            console.log(row);
             return cb(`${liveRoom} already exist!`, null);
           }
         }
       );
-    }
-
-    socket.join(liveRoom, () => {
-      if (data.sender) {
+      socket.join(liveRoom, () => {
         db.run(
           'INSERT INTO products(liveId, title, list, date) VALUES(?, ?, ?, ?)',
           [liveRoom, data.title, JSON.stringify(data.products), data.date]
@@ -69,25 +65,37 @@ io.on('connection', socket => {
         getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
           socket.broadcast.emit('roomlist', result);
         });
-      } else {
-        db.get(
-          'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
-          [liveRoom],
-          (err, row) => {
-            if (row) {
-              // row.list = JSON.parse(row.list);
-              console.log('Finding room', row);
-              cb(null, row);
-            }
-          }
-        );
-      }
-      cb(null, `Connected to ${liveRoom}`);
-    });
+        cb(null, `Connected to ${liveRoom}`);
+      });
+    } else {
+      io.in(liveRoom).clients(function(error, clients) {
+        if (clients.length > 0) {
+          socket.join(liveRoom, () => {
+            db.get(
+              'SELECT * FROM products WHERE liveId LIKE ? LIMIT 1',
+              [liveRoom],
+              (err, row) => {
+                if (row) {
+                  cb(null, {
+                    liveId: row.liveId,
+                    title: row.title,
+                    products: JSON.parse(row.list),
+                    date: row.date
+                  });
+                }
+              }
+            );
+            cb(null, `Connected to ${liveRoom}`);
+          })
+        }
+      });
+    }
   });
 
   socket.on('stream', (shopId, image) => {
-    let liveRoom = `liveroom-${shopId}`;
+    let liveRoom = `liveroom-${shopId
+      .toString()
+      .replace('liveroom-', '')}`
     socket.broadcast.to(liveRoom).emit('stream', image);
   });
 
@@ -103,23 +111,28 @@ io.on('connection', socket => {
   });
 
   socket.on('leaveroom', ({ shopId, sender } = data) => {
+    console.log('leaving room now');
     if (sender) {
       let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
-      setTimeout(() => {
-        db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
-        io.in(liveRoom).clients(function(error, clients) {
-          if (clients.length > 0) {
-            console.log('clients in the room: \n');
-            console.log(clients);
-            clients.forEach(function(socket_id) {
-              console.log('removeing room');
-              io.sockets.sockets[socket_id].leave(liveRoom);
-            });
-          }
-        });
-        let rooms = Object.keys(io.sockets.adapter.rooms);
-        socket.broadcast.emit('roomlist', getRoom(rooms));
-      }, 500);
+      db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
+      io.in(liveRoom).clients(function(error, clients) {
+        console.log(clients)
+        if (clients.length > 0) {
+          clients.forEach((socket_id, index) => {
+            io.sockets.sockets[socket_id].leave(liveRoom);
+            if (clients.length - index === 1) {
+              console.log(clients.length - index);
+              getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
+                socket.broadcast.emit('roomlist', result);
+              });
+            }
+          });
+        } else {
+          getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
+            socket.broadcast.emit('roomlist', result);
+          });
+        }
+      });
     }
   });
 });
@@ -134,15 +147,12 @@ const getRoom = (rooms, cb) => {
           .replace('[', '(')
           .replace(']', ')'),
       (err, row) => {
-        console.log(err);
-        console.log(row);
         const d = {
           liveId: row.liveId,
           title: row.title,
           products: JSON.parse(row.list),
           date: row.date
         };
-        console.log('eeeeeeee', d);
         roomData.push(d);
         if (roomData.length === filteredRooms.length) {
           cb(null, roomData);

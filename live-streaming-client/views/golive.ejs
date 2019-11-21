@@ -23,7 +23,7 @@
         <video
           src=""
           id="video"
-          style="width:700px; height: 525;"
+          style="width:730; height: 414;"
           autoplay="true"
         ></video>
         <canvas style="display:none;" id="preview"></canvas>
@@ -38,21 +38,22 @@
       const shopId = new Date().getTime();
 
       window.onbeforeunload = () => {
+        console.log('leaving room');
         socket.emit('leaveroom', { shopId, sender: true });
+        socket.close();
       };
 
       const canvas = document.getElementById('preview');
       const context = canvas.getContext('2d');
 
-      canvas.width = 900;
-      canvas.height = 700;
+      canvas.width = 730;
+      canvas.height = 414;
 
       context.width = canvas.width;
       context.height = canvas.height;
 
       const video = document.getElementById('video');
 
-      console.log('emiting to room');
       socket.emit(
         'room',
         {
@@ -87,7 +88,7 @@
 
       function viewVideo(video, context) {
         context.drawImage(video, 0, 0, context.width, context.height);
-        socket.emit('stream', shopId, canvas.toDataURL('image/webp'));
+        socket.emit('stream', shopId, canvas.toDataURL('image/webp', 0.3));
       }
 
       $(function() {

@@ -42,7 +42,7 @@
     </div>
   </body>
   <script type="text/javascript">
-    const socket = io('https://localhost:3232').connect();
+    const socket = io('https://localhost:8000').connect();
     socket.on('connect', () => {
       socket.emit('roomlist');
       socket.on('roomlist', function(rooms) {
