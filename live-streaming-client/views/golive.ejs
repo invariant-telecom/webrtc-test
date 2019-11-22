@@ -44,7 +44,9 @@
       };
 
       const canvas = document.getElementById('preview');
+      console.log('canvas', canvas);
       const context = canvas.getContext('2d');
+      console.log('context', context);
 
       canvas.width = 730;
       canvas.height = 414;
@@ -81,6 +83,7 @@
         try {
           video.srcObject = stream;
         } catch (error) {
+          console.log('came here');
           video.src = URL.createObjectURL(stream);
         }
         logger('Camera connected');
@@ -91,6 +94,7 @@
       }
 
       function viewVideo(video, context) {
+        // console.log('height width', context.width, context.height);
         context.drawImage(video, 0, 0, context.width, context.height);
         socket.emit('stream', shopId, canvas.toDataURL('image/webp', 0.3));
       }
@@ -115,7 +119,7 @@
 
         setInterval(function() {
           viewVideo(video, context);
-        }, 5);
+        }, 3000);
       });
     });
   </script>

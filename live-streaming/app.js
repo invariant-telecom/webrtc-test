@@ -43,6 +43,7 @@ app.get('/', function(req, res, next) {
  */
 io.on('connection', socket => {
   socket.on('room', (data, cb) => {
+    console.log('incomming data', data);
     const liveRoom = `liveroom-${data.shopId
       .toString()
       .replace('liveroom-', '')}`;
