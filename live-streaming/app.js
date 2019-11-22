@@ -54,20 +54,26 @@ io.on('connection', socket => {
         [liveRoom],
         (err, row) => {
           if (row) {
-            return cb(`${liveRoom} already exist!`, null);
+            socket.join(liveRoom, () => {
+              getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
+                socket.broadcast.emit('roomlist', result);
+              });
+              return cb(null, `Connected to ${liveRoom}`);
+            });
+          } else {
+            socket.join(liveRoom, () => {
+              db.run(
+                'INSERT INTO products(liveId, title, list, date) VALUES(?, ?, ?, ?)',
+                [liveRoom, data.title, JSON.stringify(data.products), data.date]
+              );
+              getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
+                socket.broadcast.emit('roomlist', result);
+              });
+              return cb(null, `Connected to ${liveRoom}`);
+            });
           }
         }
       );
-      socket.join(liveRoom, () => {
-        db.run(
-          'INSERT INTO products(liveId, title, list, date) VALUES(?, ?, ?, ?)',
-          [liveRoom, data.title, JSON.stringify(data.products), data.date]
-        );
-        getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
-          socket.broadcast.emit('roomlist', result);
-        });
-        return cb(null, `Connected to ${liveRoom}`);
-      });
     } else {
       io.in(liveRoom).clients(function(error, clients) {
         if (clients.length > 0) {
