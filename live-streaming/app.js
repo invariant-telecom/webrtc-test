@@ -65,7 +65,7 @@ io.on('connection', socket => {
         getRoom(Object.keys(io.sockets.adapter.rooms), (err, result) => {
           socket.broadcast.emit('roomlist', result);
         });
-        cb(null, `Connected to ${liveRoom}`);
+        return cb(null, `Connected to ${liveRoom}`);
       });
     } else {
       io.in(liveRoom).clients(function(error, clients) {
@@ -76,7 +76,7 @@ io.on('connection', socket => {
               [liveRoom],
               (err, row) => {
                 if (row) {
-                  cb(null, {
+                  return cb(null, {
                     liveId: row.liveId,
                     title: row.title,
                     products: JSON.parse(row.list),
@@ -85,17 +85,14 @@ io.on('connection', socket => {
                 }
               }
             );
-            cb(null, `Connected to ${liveRoom}`);
-          })
+          });
         }
       });
     }
   });
 
   socket.on('stream', (shopId, image) => {
-    let liveRoom = `liveroom-${shopId
-      .toString()
-      .replace('liveroom-', '')}`
+    let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
     socket.broadcast.to(liveRoom).emit('stream', image);
   });
 
@@ -116,7 +113,7 @@ io.on('connection', socket => {
       let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
       db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
       io.in(liveRoom).clients(function(error, clients) {
-        console.log(clients)
+        console.log(clients);
         if (clients.length > 0) {
           clients.forEach((socket_id, index) => {
             io.sockets.sockets[socket_id].leave(liveRoom);
