@@ -104,7 +104,8 @@ io.on('connection', socket => {
   });
 
   socket.on('message', (shopId, message) => {
-    let liveRoom = `liveroom-${shopId}`;
+    console.log('got message', message);
+    let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
     socket.broadcast.to(liveRoom).emit('message', message);
   });
 
@@ -116,8 +117,8 @@ io.on('connection', socket => {
 
   socket.on('leaveroom', ({ shopId, sender } = data) => {
     console.log('leaving room now');
+    let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
     if (sender) {
-      let liveRoom = `liveroom-${shopId.toString().replace('liveroom-', '')}`;
       db.run('DELETE FROM products WHERE liveId LIKE ?', [liveRoom]);
       io.in(liveRoom).clients(function(error, clients) {
         console.log(clients);
@@ -137,6 +138,8 @@ io.on('connection', socket => {
           });
         }
       });
+    } else {
+      socket.leave(liveRoom);
     }
   });
 });
